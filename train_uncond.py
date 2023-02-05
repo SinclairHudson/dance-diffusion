@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from dataclasses import dataclass
 from prefigure.prefigure import get_all_args, push_wandb_config
 from contextlib import contextmanager
 from copy import deepcopy
@@ -183,9 +184,8 @@ class DemoCallback(pl.Callback):
         except Exception as e:
             print(f'{type(e).__name__}: {e}', file=sys.stderr)
 
-def main():
+def main(args):
 
-    args = get_all_args()
 
     args.latent_dim = 0
 
@@ -215,7 +215,7 @@ def main():
         # num_nodes = args.num_nodes,
         # strategy='ddp',
         precision=16,
-        accumulate_grad_batches=args.accum_batches, 
+        accumulate_grad_batches=args.accum_batches,
         callbacks=[ckpt_callback, demo_callback, exc_callback],
         logger=wandb_logger,
         log_every_n_steps=1,
@@ -224,6 +224,35 @@ def main():
 
     diffusion_trainer.fit(diffusion_model, train_dl, ckpt_path=args.ckpt_path)
 
+@dataclass
+class Config():
+    name="lofi-dd"
+    ckpt_path = "/home/sinclair/Documents/dance-diffusion/jmann-small-pretrained.ckpt"
+    training_dir = "/media/sinclair/datasets/lofi/train_splits"
+    output_dir = "/home/sinclair/Documents/dance-diffusion/outputs"
+    save_path="/home/sinclair/Documents/dance-diffusion/outputs"
+    # model parameters
+    sample_rate = 16000 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
+    sample_size = 65536 * 2 # input/output size of the model.
+    # training hyperparams
+    random_crop=True # crop audio at a random point
+    checkpoint_every = 1000 # steps
+    num_workers=2
+    batch_size=2
+    accum_batches=2
+    seed=1337
+    num_gpus=1
+    cache_training_data=True
+    save_wandb="none"
+    # demos, saved files to be listened to
+    num_demos=2 # number of samples outputted upon a demo
+    demo_every = 500 # steps
+    demo_steps=250 # number of denoising steps to run
+    ema_decay=0.995 # exponential moving average decay rate
+
+
 if __name__ == '__main__':
-    main()
+    c = Config()
+    main(c)
+    # main(get_all_args())
 
