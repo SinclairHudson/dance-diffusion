@@ -45,6 +45,7 @@ def alpha_sigma_to_t(alpha, sigma):
 @torch.no_grad()
 def sample(model, x, steps, eta):
     """Draws samples from a model given starting noise."""
+    print(20 * "-" + "creating a sample" + 20 * "-")
     ts = x.new_ones([x.shape[0]])
 
     # Create the noise schedule
@@ -199,6 +200,7 @@ def main(args):
     train_dl = data.DataLoader(train_set, args.batch_size, shuffle=True,
                                num_workers=args.num_workers, persistent_workers=True, pin_memory=True)
     wandb_logger = pl.loggers.WandbLogger(project=args.name, log_model='all' if args.save_wandb=='all' else None)
+    wandb_logger.experiment.config.update(dict(args))
 
     exc_callback = ExceptionCallback()
     ckpt_callback = pl.callbacks.ModelCheckpoint(every_n_train_steps=args.checkpoint_every, save_top_k=-1, dirpath=save_path)
@@ -237,13 +239,13 @@ class Config():
     # training hyperparams
     random_crop=True # crop audio at a random point
     checkpoint_every = 1000 # steps
-    num_workers=2
+    num_workers=6
     batch_size=2
     accum_batches=2
     seed=1337
     num_gpus=1
     cache_training_data=True
-    save_wandb="none"
+    save_wandb="all" # all or none
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
     demo_every = 500 # steps
