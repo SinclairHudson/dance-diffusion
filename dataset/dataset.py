@@ -4,7 +4,7 @@ from torchaudio import transforms as T
 import random
 from glob import glob
 import os
-from audio_diffusion.utils import Stereo, PadCrop, RandomPhaseInvert
+from audio_diffusion.utils import Stereo, PadCrop, RandomPhaseInvert, AddGaussianNoise, RandomPitchShift
 import tqdm
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -15,10 +15,11 @@ class SampleDataset(torch.utils.data.Dataset):
     self.filenames = []
 
     print(f"Random crop: {global_args.random_crop}")
-    
     self.augs = torch.nn.Sequential(
       PadCrop(global_args.sample_size, randomize=global_args.random_crop),
       RandomPhaseInvert(),
+      # AddGaussianNoise(global_args.augmentation_random_noise),
+      RandomPitchShift(global_args.sample_rate, global_args.augmentation_max_pitch_shift),
     )
 
     self.encoding = torch.nn.Sequential(
@@ -53,10 +54,10 @@ class SampleDataset(torch.utils.data.Dataset):
 
   def get_data_range(self): # for parallel runs, only grab part of the data
     start, stop = 0, len(self.filenames)
-    try: 
+    try:
       local_rank = int(os.environ["LOCAL_RANK"])
       world_size = int(os.environ["WORLD_SIZE"])
-      interval = stop//world_size 
+      interval = stop//world_size
       start, stop = local_rank*interval, (local_rank+1)*interval
       print("local_rank, world_size, start, stop =",local_rank, world_size, start, stop)
       return start, stop
@@ -87,7 +88,6 @@ class SampleDataset(torch.utils.data.Dataset):
       #Run augmentations on this sample (including random crop)
       if self.augs is not None:
         audio = self.augs(audio)
-
       audio = audio.clamp(-1, 1)
 
       #Encode the file to assist in prediction

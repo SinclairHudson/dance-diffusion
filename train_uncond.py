@@ -178,7 +178,7 @@ class DemoCallback(pl.Callback):
             log_dict[f'demo'] = wandb.Audio(filename,
                                                 sample_rate=self.sample_rate,
                                                 caption=f'Demo')
-        
+
             log_dict[f'demo_melspec_left'] = wandb.Image(audio_spectrogram_image(fakes))
 
             trainer.logger.experiment.log(log_dict, step=trainer.global_step)
@@ -186,8 +186,6 @@ class DemoCallback(pl.Callback):
             print(f'{type(e).__name__}: {e}', file=sys.stderr)
 
 def main(args):
-
-
     args.latent_dim = 0
 
     save_path = None if args.save_path == "" else args.save_path
@@ -200,7 +198,7 @@ def main(args):
     train_dl = data.DataLoader(train_set, args.batch_size, shuffle=True,
                                num_workers=args.num_workers, persistent_workers=True, pin_memory=True)
     wandb_logger = pl.loggers.WandbLogger(project=args.name, log_model='all' if args.save_wandb=='all' else None)
-    wandb_logger.experiment.config.update(dict(args))
+    wandb_logger.experiment.config.update(args.__dict__)
 
     exc_callback = ExceptionCallback()
     ckpt_callback = pl.callbacks.ModelCheckpoint(every_n_train_steps=args.checkpoint_every, save_top_k=-1, dirpath=save_path)
@@ -252,9 +250,25 @@ class Config():
     demo_steps=250 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
 
+    # augmentation
+    augmentation_random_noise=0.2
+    augmentation_max_pitch_shift=2  # integer
+
+class DebugConfig(Config):
+    num_workers=1
+    batch_size=1
+    accum_batches=1
+    cache_training_data=False
+    save_wandb="all" # all or none
+    # demos, saved files to be listened to
+    num_demos=2 # number of samples outputted upon a demo
+    demo_every = 500 # steps
+    demo_steps=5 # number of denoising steps to run
+    ema_decay=0.995 # exponential moving average decay rate
+
 
 if __name__ == '__main__':
-    c = Config()
+    c = DebugConfig()
     main(c)
     # main(get_all_args())
 

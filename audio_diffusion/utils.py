@@ -2,10 +2,11 @@ from contextlib import contextmanager
 import warnings
 
 import torch
-from torch import nn 
-import random 
+from torch import nn
+import random
 import math
 from torch import optim
+import torchaudio.functional as F
 
 def append_dims(x, target_dims):
     """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
@@ -180,6 +181,28 @@ class RandomPhaseInvert(nn.Module):
     def __call__(self, signal):
         return -signal if (random.random() < self.p) else signal
 
+class AddGaussianNoise(nn.Module):
+    def __init__(self, sigma=0.2):
+        super().__init__()
+        self.sigma = sigma
+    def __call__(self, signal):
+        # create normal noise with same shape as signal
+        noise = torch.normal(0, self.sigma, signal.shape)
+        return signal + noise
+
+class RandomPitchShift(nn.Module):
+    def __init__(self, sample_rate, max_abs_shift=2):
+        super().__init__()
+        self.max_abs_shift = max_abs_shift
+        self.sample_rate = sample_rate
+
+    def __call__(self, signal):
+        # create normal noise with same shape as signal
+        shift = random.randint(-self.max_abs_shift, self.max_abs_shift)
+        return F.pitch_shift(signal, self.sample_rate, shift)
+
+
+
 class Stereo(nn.Module):
   def __call__(self, signal):
     signal_shape = signal.shape
@@ -190,6 +213,6 @@ class Stereo(nn.Module):
         if signal_shape[0] == 1: #1, s -> 2, s
             signal = signal.repeat(2, 1)
         elif signal_shape[0] > 2: #?, s -> 2,s
-            signal = signal[:2, :]    
+            signal = signal[:2, :]
 
     return signal
