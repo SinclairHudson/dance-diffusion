@@ -202,7 +202,6 @@ class RandomPitchShift(nn.Module):
         return F.pitch_shift(signal, self.sample_rate, shift)
 
 
-
 class Stereo(nn.Module):
   def __call__(self, signal):
     signal_shape = signal.shape

@@ -96,10 +96,10 @@ class DiffusionUncond(pl.LightningModule):
         self.diffusion_ema = deepcopy(self.diffusion)
         self.rng = torch.quasirandom.SobolEngine(1, scramble=True, seed=global_args.seed)
         self.ema_decay = global_args.ema_decay
-        
+
     def configure_optimizers(self):
         return optim.Adam([*self.diffusion.parameters()], lr=4e-5)
-  
+
     def training_step(self, batch, batch_idx):
         reals = batch[0]
 
@@ -153,15 +153,12 @@ class DemoCallback(pl.Callback):
     @rank_zero_only
     @torch.no_grad()
     #def on_train_epoch_end(self, trainer, module):
-    def on_train_batch_end(self, trainer, module, outputs, batch, batch_idx):        
-  
+    def on_train_batch_end(self, trainer, module, outputs, batch, batch_idx):
         if (trainer.global_step - 1) % self.demo_every != 0 or self.last_demo_step == trainer.global_step:
             return
         if trainer.global_step <= 1:
             return  # don't demo in the first step, it'll be garbage
-        
         self.last_demo_step = trainer.global_step
-    
         noise = torch.randn([self.num_demos, 2, self.demo_samples]).to(module.device)
 
         try:
@@ -188,6 +185,9 @@ class DemoCallback(pl.Callback):
             print(f'{type(e).__name__}: {e}', file=sys.stderr)
 
 def main(args):
+    """
+    Trains the model
+    """
     args.latent_dim = 0
 
     save_path = None if args.save_path == "" else args.save_path
@@ -228,17 +228,19 @@ def main(args):
 
 @dataclass
 class Config():
-    name="lofi-dd"
-    ckpt_path = "/home/sinclair/Documents/dance-diffusion/jmann-small-pretrained.ckpt"
-    training_dir = "/media/sinclair/datasets/lofi/train_splits"
+    data="rainforest"
+    name=f"{data}-dd"
+    ckpt_path = None
+    training_dir = f"/media/sinclair/datasets/{data}/train_splits"
     output_dir = "/home/sinclair/Documents/dance-diffusion/outputs"
     save_path="/home/sinclair/Documents/dance-diffusion/outputs"
     # model parameters
     sample_rate = 16000 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
     sample_size = 65536 * 2 # input/output size of the model.
+    # length in seconds is sample_rate/sample_size
     # training hyperparams
     random_crop=True # crop audio at a random point
-    checkpoint_every = 1000 # steps
+    checkpoint_every = 2000 # steps
     num_workers=4
     batch_size=2
     accum_batches=2

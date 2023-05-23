@@ -2,7 +2,7 @@ from pydub import AudioSegment, silence
 from tqdm import tqdm
 import os
 
-MIN_SONG_LENGTH = 30 # seconds
+SONG_LENGTH = 30 # seconds
 
 ROOT_DIR = "/media/sinclair/datasets/rainforest"
 
@@ -21,11 +21,11 @@ def export_songs(origin_files, split_dir: str) -> None:
         print(f"loaded a file that was {len_in_ms}ms long, {len_in_ms/(60 * 1000)} mins long, {len_in_ms/(60 * 60 * 1000)} hours long.")
 
         len_in_s = len_in_ms / 1000
-        num_songs = int(len_in_s / MIN_SONG_LENGTH)  # a floor
-        print(f"cutting audio into non-silent segments greater than {MIN_SONG_LENGTH} seconds.")
+        num_songs = int(len_in_s / SONG_LENGTH)  # a floor
+        print(f"cutting audio into non-silent segments greater than {SONG_LENGTH} seconds.")
         print(f"expecting {num_songs} songs.")
         for x in range(num_songs):
-            song = myaudio[x * 1000: (x+1)*1000]
+            song = myaudio[x * SONG_LENGTH * 1000: (x+1) * SONG_LENGTH *1000]
             song.export(os.path.join(ROOT_DIR, split_dir, f"song_{song_counter}.wav"), format="wav")
             song_counter += 1
         print(f"exported {song_counter} songs.")
