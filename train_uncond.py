@@ -157,6 +157,8 @@ class DemoCallback(pl.Callback):
   
         if (trainer.global_step - 1) % self.demo_every != 0 or self.last_demo_step == trainer.global_step:
             return
+        if trainer.global_step <= 1:
+            return  # don't demo in the first step, it'll be garbage
         
         self.last_demo_step = trainer.global_step
     
@@ -169,7 +171,7 @@ class DemoCallback(pl.Callback):
             fakes = rearrange(fakes, 'b d n -> d (b n)')
 
             log_dict = {}
-            
+
             filename = f'demo_{trainer.global_step:08}.wav'
             fakes = fakes.clamp(-1, 1).mul(32767).to(torch.int16).cpu()
             torchaudio.save(filename, fakes, self.sample_rate)
@@ -237,12 +239,12 @@ class Config():
     # training hyperparams
     random_crop=True # crop audio at a random point
     checkpoint_every = 1000 # steps
-    num_workers=6
+    num_workers=4
     batch_size=2
     accum_batches=2
     seed=1337
     num_gpus=1
-    cache_training_data=True
+    cache_training_data=False
     save_wandb="all" # all or none
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
@@ -254,7 +256,9 @@ class Config():
     augmentation_random_noise=0.2
     augmentation_max_pitch_shift=2  # integer
 
+@dataclass
 class DebugConfig(Config):
+    # modifications on the original config for debugging
     num_workers=1
     batch_size=1
     accum_batches=1
@@ -262,13 +266,13 @@ class DebugConfig(Config):
     save_wandb="all" # all or none
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
-    demo_every = 500 # steps
+    demo_every = 20 # steps
     demo_steps=5 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
 
 
 if __name__ == '__main__':
-    c = DebugConfig()
+    c = Config()
     main(c)
     # main(get_all_args())
 

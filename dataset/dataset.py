@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torchaudio
 from torchaudio import transforms as T
 import random
@@ -12,14 +13,15 @@ from functools import partial
 class SampleDataset(torch.utils.data.Dataset):
   def __init__(self, paths, global_args):
     super().__init__()
-    self.filenames = []
+    self.filenames = np.array([])
 
     print(f"Random crop: {global_args.random_crop}")
+    # self.augs = None
     self.augs = torch.nn.Sequential(
       PadCrop(global_args.sample_size, randomize=global_args.random_crop),
-      RandomPhaseInvert(),
-      # AddGaussianNoise(global_args.augmentation_random_noise),
-      RandomPitchShift(global_args.sample_rate, global_args.augmentation_max_pitch_shift),
+      # RandomPhaseInvert(),
+      # # AddGaussianNoise(global_args.augmentation_random_noise),
+      # RandomPitchShift(global_args.sample_rate, global_args.augmentation_max_pitch_shift),
     )
 
     self.encoding = torch.nn.Sequential(
@@ -28,7 +30,7 @@ class SampleDataset(torch.utils.data.Dataset):
 
     for path in paths:
       for ext in ['wav','flac','ogg','aiff','aif','mp3']:
-        self.filenames += glob(f'{path}/**/*.{ext}', recursive=True)
+        self.filenames = np.append(self.filenames, list(glob(f'{path}/**/*.{ext}', recursive=True)))
 
     self.sr = global_args.sample_rate
     if hasattr(global_args,'load_frac'):
@@ -78,6 +80,7 @@ class SampleDataset(torch.utils.data.Dataset):
     return len(self.filenames)
 
   def __getitem__(self, idx):
+    # gets by file name
     audio_filename = self.filenames[idx]
     try:
       if self.cache_training_data:
@@ -85,12 +88,12 @@ class SampleDataset(torch.utils.data.Dataset):
       else:
         audio = self.load_file(audio_filename)
 
-      #Run augmentations on this sample (including random crop)
+      # Run augmentations on this sample (including random crop)
       if self.augs is not None:
         audio = self.augs(audio)
       audio = audio.clamp(-1, 1)
 
-      #Encode the file to assist in prediction
+      # Encode the file to assist in prediction
       if self.encoding is not None:
         audio = self.encoding(audio)
 
