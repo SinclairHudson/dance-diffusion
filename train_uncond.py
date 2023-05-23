@@ -43,7 +43,7 @@ def alpha_sigma_to_t(alpha, sigma):
     return torch.atan2(sigma, alpha) / math.pi * 2
 
 @torch.no_grad()
-def sample(model, x, steps, eta):
+def sample(model, x, steps:int, eta):
     """Draws samples from a model given starting noise."""
     print(20 * "-" + "creating a sample" + 20 * "-")
     ts = x.new_ones([x.shape[0]])
@@ -251,7 +251,7 @@ class Config():
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
     demo_every = 500 # steps
-    demo_steps=250 # number of denoising steps to run
+    demo_steps=750 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
 
     # augmentation

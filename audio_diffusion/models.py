@@ -7,10 +7,10 @@ from .utils import append_dims, expand_to_planes
 
 class DiffusionAttnUnet1D(nn.Module):
     def __init__(
-        self, 
-        global_args, 
-        io_channels = 2, 
-        depth=14, 
+        self,
+        global_args,
+        io_channels = 2,
+        depth=14,
         n_attn_layers = 6,
         c_mults = [128, 128, 256, 256] + [512] * 10
     ):
@@ -51,8 +51,6 @@ class DiffusionAttnUnet1D(nn.Module):
                     SelfAttention1d(c_prev, c_prev //
                                     32) if add_attn else nn.Identity(),
                     Upsample1d(kernel="cubic")
-                    # nn.Upsample(scale_factor=2, mode='linear',
-                    #             align_corners=False),
                 )
             else:
                 block = nn.Sequential(
@@ -72,7 +70,6 @@ class DiffusionAttnUnet1D(nn.Module):
 
     def forward(self, input, t, cond=None):
         timestep_embed = expand_to_planes(self.timestep_embed(t[:, None]), input.shape)
-        
         inputs = [input, timestep_embed]
 
         if cond is not None:
