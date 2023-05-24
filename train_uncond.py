@@ -246,11 +246,11 @@ class Config():
     accum_batches=2
     seed=1337
     num_gpus=1
-    cache_training_data=False
+    cache_training_data=True
     save_wandb="all" # all or none
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
-    demo_every = 500 # steps
+    demo_every = 250 # steps
     demo_steps=750 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
 
