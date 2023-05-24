@@ -8,6 +8,7 @@ from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 import numpy as np
 from PIL import Image
+from typing import List
 
 import torch
 from torch import optim, nn
@@ -20,6 +21,19 @@ from einops import rearrange
 import wandb
 import numpy as np
 import pandas as pd
+
+def noise_schedule_plot(steps: List[int]) -> Image.Image:
+    fig = Figure(figsize=(5, 4), dpi=100)
+    canvas = FigureCanvasAgg(fig)
+    axs = fig.add_subplot()
+    axs.set_title("noise schedule")
+    axs.set_ylabel('t')
+    axs.set_xlabel('timestep')
+    axs.plot(steps)
+    canvas.draw()
+    rgba = np.asarray(canvas.buffer_rgba())
+    return Image.fromarray(rgba)
+
 
 def spectrogram_image(spec, title=None, ylabel='freq_bin', aspect='auto', xmax=None, db_range=[35,120]):
     """
@@ -51,8 +65,8 @@ def audio_spectrogram_image(waveform, power=2.0, sample_rate=48000):
     n_mels = 80
 
     mel_spectrogram_op = T.MelSpectrogram(
-        sample_rate=sample_rate, n_fft=n_fft, win_length=win_length, 
-        hop_length=hop_length, center=True, pad_mode="reflect", power=power, 
+        sample_rate=sample_rate, n_fft=n_fft, win_length=win_length,
+        hop_length=hop_length, center=True, pad_mode="reflect", power=power,
         norm='slaney', onesided=True, n_mels=n_mels, mel_scale="htk")
 
     melspec = mel_spectrogram_op(waveform.float())

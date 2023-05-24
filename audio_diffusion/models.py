@@ -10,9 +10,9 @@ class DiffusionAttnUnet1D(nn.Module):
         self,
         global_args,
         io_channels = 2,
-        depth=16,
-        n_attn_layers = 6,
-        c_mults = [128, 128, 256, 256] + [512] * 12
+        depth=12,
+        n_attn_layers = 8,
+        c_mults = [256, 256] + [512] * 10
     ):
         super().__init__()
 

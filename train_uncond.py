@@ -23,7 +23,7 @@ from dataset.dataset import SampleDataset
 
 from audio_diffusion.models import DiffusionAttnUnet1D
 from audio_diffusion.utils import ema_update
-from viz.viz import audio_spectrogram_image
+from viz.viz import audio_spectrogram_image, noise_schedule_plot
 
 
 # Define the noise schedule and sampling loop
@@ -84,7 +84,7 @@ def sample(model, x, steps:int, eta):
                 x += torch.randn_like(x) * ddim_sigma
 
     # If we are on the last timestep, output the denoised image
-    return pred
+    return pred, t
 
 
 
@@ -153,7 +153,7 @@ class DemoCallback(pl.Callback):
     @rank_zero_only
     @torch.no_grad()
     #def on_train_epoch_end(self, trainer, module):
-    def on_train_batch_end(self, trainer, module, outputs, batch, batch_idx):
+    def on_train_batch_end(self, trainer, module, one, two, three):
         if (trainer.global_step - 1) % self.demo_every != 0 or self.last_demo_step == trainer.global_step:
             return
         if trainer.global_step <= 1:
@@ -162,7 +162,7 @@ class DemoCallback(pl.Callback):
         noise = torch.randn([self.num_demos, 2, self.demo_samples]).to(module.device)
 
         try:
-            fakes = sample(module.diffusion_ema, noise, self.demo_steps, 0)
+            fakes, t = sample(module.diffusion_ema, noise, self.demo_steps, 0)
 
             # Put the demos together
             fakes = rearrange(fakes, 'b d n -> d (b n)')
@@ -179,6 +179,7 @@ class DemoCallback(pl.Callback):
                                                 caption=f'Demo')
 
             log_dict[f'demo_melspec_left'] = wandb.Image(audio_spectrogram_image(fakes))
+            log_dict[f'noise_schedule'] = wandb.Image(noise_schedule_plot(t))
 
             trainer.logger.experiment.log(log_dict, step=trainer.global_step)
         except Exception as e:
@@ -236,7 +237,7 @@ class Config():
     save_path="/home/sinclair/Documents/dance-diffusion/outputs"
     # model parameters
     sample_rate = 16000 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
-    sample_size = 65536 * 2 # input/output size of the model.
+    sample_size = 65536 * 1 # input/output size of the model.
     # length in seconds is sample_rate/sample_size
     # training hyperparams
     random_crop=True # crop audio at a random point
@@ -269,7 +270,7 @@ class DebugConfig(Config):
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
     demo_every = 20 # steps
-    demo_steps=5 # number of denoising steps to run
+    demo_steps=200 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
 
 
