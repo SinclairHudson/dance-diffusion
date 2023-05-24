@@ -96,6 +96,10 @@ class DiffusionUncond(pl.LightningModule):
         self.diffusion_ema = deepcopy(self.diffusion)
         self.rng = torch.quasirandom.SobolEngine(1, scramble=True, seed=global_args.seed)
         self.ema_decay = global_args.ema_decay
+        self.loss_func = {
+            'L1': F.l1_loss,
+            'L2': F.mse_loss,
+        }[global_args.loss_func]
 
     def configure_optimizers(self):
         return optim.Adam([*self.diffusion.parameters()], lr=4e-5)
@@ -121,7 +125,7 @@ class DiffusionUncond(pl.LightningModule):
         with torch.cuda.amp.autocast():
             v = self.diffusion(noised_reals, t)
             mse_loss = F.mse_loss(v, targets)
-            loss = mse_loss
+            loss = self.loss_func(v, targets)
 
         log_dict = {
             'train/loss': loss.detach(),
@@ -231,29 +235,30 @@ def main(args):
 class Config():
     data="rainforest"
     name=f"{data}-dd"
-    ckpt_path = None
+    ckpt_path = "gwf-440k.ckpt"
     training_dir = f"/media/sinclair/datasets/{data}/train_splits"
     output_dir = "/home/sinclair/Documents/dance-diffusion/outputs"
     save_path="/home/sinclair/Documents/dance-diffusion/outputs"
     # model parameters
-    sample_rate = 16000 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
-    sample_size = 65536 * 1 # input/output size of the model.
+    sample_rate = 16384 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
+    sample_size = sample_rate * 4 # input/output size of the model.
     # length in seconds is sample_rate/sample_size
     # training hyperparams
     random_crop=True # crop audio at a random point
-    checkpoint_every = 2000 # steps
-    num_workers=4
-    batch_size=2
+    checkpoint_every=3000 # steps
+    num_workers=6
+    batch_size=4
     accum_batches=2
     seed=1337
     num_gpus=1
-    cache_training_data=True
+    cache_training_data=False
     save_wandb="all" # all or none
     # demos, saved files to be listened to
-    num_demos=2 # number of samples outputted upon a demo
-    demo_every = 250 # steps
-    demo_steps=750 # number of denoising steps to run
+    num_demos=4 # number of samples outputted upon a demo
+    demo_every=1000 # steps
+    demo_steps=300 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
+    loss_func = "L1" # L1 or L2
 
     # augmentation
     augmentation_random_noise=0.2
@@ -262,20 +267,17 @@ class Config():
 @dataclass
 class DebugConfig(Config):
     # modifications on the original config for debugging
-    num_workers=1
-    batch_size=1
-    accum_batches=1
-    cache_training_data=False
+    # num_workers=1
+    # batch_size=1
+    # accum_batches=1
     save_wandb="all" # all or none
     # demos, saved files to be listened to
     num_demos=2 # number of samples outputted upon a demo
-    demo_every = 20 # steps
-    demo_steps=200 # number of denoising steps to run
+    demo_every = 50 # steps
+    demo_steps=20 # number of denoising steps to run
     ema_decay=0.995 # exponential moving average decay rate
 
 
 if __name__ == '__main__':
     c = Config()
     main(c)
-    # main(get_all_args())
-

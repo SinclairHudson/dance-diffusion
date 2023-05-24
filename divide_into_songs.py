@@ -2,7 +2,7 @@ from pydub import AudioSegment, silence
 from tqdm import tqdm
 import os
 
-SONG_LENGTH = 30 # seconds
+SONG_LENGTH = 10 # seconds
 
 ROOT_DIR = "/media/sinclair/datasets/rainforest"
 

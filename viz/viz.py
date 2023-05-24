@@ -15,7 +15,7 @@ from torch import optim, nn
 from torch.nn import functional as F
 import torchaudio
 import torchaudio.transforms as T
-import librosa 
+import librosa
 from einops import rearrange
 
 import wandb
