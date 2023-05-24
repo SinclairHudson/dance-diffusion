@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from prefigure.prefigure import get_all_args, push_wandb_config
 from contextlib import contextmanager
 from copy import deepcopy
@@ -193,8 +193,6 @@ def main(args):
     """
     Trains the model
     """
-    args.latent_dim = 0
-
     save_path = None if args.save_path == "" else args.save_path
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -205,7 +203,6 @@ def main(args):
     train_dl = data.DataLoader(train_set, args.batch_size, shuffle=True,
                                num_workers=args.num_workers, persistent_workers=True, pin_memory=True)
     wandb_logger = pl.loggers.WandbLogger(project=args.name, log_model='all' if args.save_wandb=='all' else None)
-    wandb_logger.experiment.config.update(args.__dict__)
 
     exc_callback = ExceptionCallback()
     ckpt_callback = pl.callbacks.ModelCheckpoint(every_n_train_steps=args.checkpoint_every, save_top_k=-1, dirpath=save_path)
@@ -214,7 +211,7 @@ def main(args):
     diffusion_model = DiffusionUncond(args)
 
     wandb_logger.watch(diffusion_model)
-    push_wandb_config(wandb_logger, args)
+    wandb.config.update(asdict(args))
 
     diffusion_trainer = pl.Trainer(
         devices=args.num_gpus,
@@ -233,51 +230,46 @@ def main(args):
 
 @dataclass
 class Config():
-    data="rainforest"
-    name=f"{data}-dd"
-    ckpt_path = "gwf-440k.ckpt"
-    training_dir = f"/media/sinclair/datasets/{data}/train_splits"
-    output_dir = "/home/sinclair/Documents/dance-diffusion/outputs"
-    save_path="/home/sinclair/Documents/dance-diffusion/outputs"
+    # NOTE: the type hints are required here to register these entries as fields (making them saveable to wandb)
+    data: str="lofi"
+    name: str=f"{data}-dd"
+    ckpt_path:str = "gwf-440k.ckpt"
+    training_dir:str = f"/media/sinclair/datasets/{data}/train_splits"
+    output_dir:str = "/home/sinclair/Documents/dance-diffusion/outputs"
+    save_path:str="/home/sinclair/Documents/dance-diffusion/outputs"
     # model parameters
-    sample_rate = 16384 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
-    sample_size = sample_rate * 4 # input/output size of the model.
+    sample_rate:int = 16384 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
+    sample_size:int = sample_rate * 4 # input/output size of the model.
     # length in seconds is sample_rate/sample_size
     # training hyperparams
-    random_crop=True # crop audio at a random point
-    checkpoint_every=3000 # steps
-    num_workers=6
-    batch_size=4
-    accum_batches=2
-    seed=1337
-    num_gpus=1
-    cache_training_data=False
-    save_wandb="all" # all or none
+    random_crop:bool=True # crop audio at a random point
+    checkpoint_every:int=3000 # steps
+    num_workers:int=4
+    batch_size: int = 4
+    accum_batches: int = 2
+    seed: int = 1337
+    num_gpus: int = 1
+    cache_training_data:bool=True
+    save_wandb: str ="all" # all or none
     # demos, saved files to be listened to
-    num_demos=4 # number of samples outputted upon a demo
-    demo_every=1000 # steps
-    demo_steps=300 # number of denoising steps to run
-    ema_decay=0.995 # exponential moving average decay rate
-    loss_func = "L1" # L1 or L2
+    num_demos: int = 4 # number of samples outputted upon a demo
+    demo_every: int = 1000 # steps
+    demo_steps: int = 300 # number of denoising steps to run
+    ema_decay: float = 0.995 # exponential moving average decay rate
+    loss_func: str = "L2" # L1 or L2
+    latent_dim: int = 0
 
     # augmentation
-    augmentation_random_noise=0.2
-    augmentation_max_pitch_shift=2  # integer
+    augmentation_max_pitch_shift: int = 2
 
 @dataclass
 class DebugConfig(Config):
     # modifications on the original config for debugging
-    # num_workers=1
-    # batch_size=1
-    # accum_batches=1
-    save_wandb="all" # all or none
-    # demos, saved files to be listened to
-    num_demos=2 # number of samples outputted upon a demo
-    demo_every = 50 # steps
-    demo_steps=20 # number of denoising steps to run
-    ema_decay=0.995 # exponential moving average decay rate
+    num_demos: int = 2
+    demo_every: int = 50
+    demo_steps: int = 20
 
 
 if __name__ == '__main__':
-    c = Config()
-    main(c)
+    args = Config()
+    main(args)
