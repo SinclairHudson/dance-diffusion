@@ -204,6 +204,7 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Using device:', device)
+    print(f"Model will output samples of length {args.length_in_sec:.03f} seconds.")
     torch.manual_seed(args.seed)
 
     train_set = SampleDataset([args.training_dir], args)
@@ -241,13 +242,15 @@ class Config():
     data: str="lofi"
     name: str=f"{data}-dd"
     ckpt_path:str = "lofi-453000.ckpt"
-    training_dir:str = f"/media/sinclair/datasets/{data}/train_splits"
+    training_dir:str = f"/media/sinclair/datasets/{data}-22k/train_splits"
     output_dir:str = "/home/sinclair/Documents/dance-diffusion/outputs"
     save_path:str="/home/sinclair/Documents/dance-diffusion/outputs"
     # model parameters
-    sample_rate:int = 16384 # rate (Hz) at which the audio is sampled at. Higher is better quality, but more expensive
-    sample_size:int = sample_rate * 4 # input/output size of the model.
+    sample_rate:int = 44100//2 # rate (Hz) at which the audio is sampled at. 
+    # NOTE: resampling is extremely slow (expensive). It's better to have the dataset at the sample rate you want
+    sample_size:int = 2 ** 16
     # length in seconds is sample_rate/sample_size
+    length_in_sec: float = sample_size/sample_rate
     # training hyperparams
     random_crop:bool=True # crop audio at a random point
     checkpoint_every:int=3000 # steps
@@ -276,7 +279,6 @@ class DebugConfig(Config):
     num_demos: int = 2
     demo_every: int = 50
     demo_steps: int = 20
-    cache_training_data:bool=False
 
 
 if __name__ == '__main__':

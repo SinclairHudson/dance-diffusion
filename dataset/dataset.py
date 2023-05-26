@@ -27,6 +27,7 @@ class SampleDataset(torch.utils.data.Dataset):
     self.encoding = torch.nn.Sequential(
       Stereo()
     )
+    self.resampler_transforms = {}  # dictionary for different resampling transforms, created if required
 
     for path in paths:
       for ext in ['wav','flac','ogg','aiff','aif','mp3']:
@@ -47,8 +48,9 @@ class SampleDataset(torch.utils.data.Dataset):
   def load_file(self, filename):
     audio, sr = torchaudio.load(filename)
     if sr != self.sr:
-      resample_tf = T.Resample(sr, self.sr)
-      audio = resample_tf(audio)
+      if sr not in self.resampler_transforms.keys():
+        self.resampler_transforms[sr] = T.Resample(sr, self.sr)
+      audio = self.resampler_transforms[sr](audio)
     return audio
 
   def load_file_ind(self, file_list,i): # used when caching training data
@@ -73,7 +75,7 @@ class SampleDataset(torch.utils.data.Dataset):
       print(f"Caching {n} input audio files:")
       wrapper = partial(self.load_file_ind, self.filenames)
       start, stop = self.get_data_range()
-      with Pool(processes=cpu_count()) as p:   # //8 to avoid FS bottleneck and/or too many processes (b/c * num_gpus)
+      with Pool(processes=cpu_count()-1) as p:   # //8 to avoid FS bottleneck and/or too many processes (b/c * num_gpus)
         self.audio_files = list(tqdm.tqdm(p.imap(wrapper, range(start,stop)), total=stop-start))
 
   def __len__(self):
