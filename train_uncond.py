@@ -243,7 +243,7 @@ class Config():
     # NOTE: the type hints are required here to register these entries as fields (making them saveable to wandb)
     data: str="lofi"
     name: str=f"{data}-dd"
-    ckpt_path:str = "lofi-453000.ckpt"
+    ckpt_path:str = "outputs/lofi-22kHz-459000.ckpt"
     training_dir:str = f"/media/sinclair/datasets/{data}-22k/train_splits"
     output_dir:str = "/home/sinclair/Documents/dance-diffusion/outputs"
     save_path:str="/home/sinclair/Documents/dance-diffusion/outputs"
@@ -287,5 +287,5 @@ class DebugConfig(Config):
 
 
 if __name__ == '__main__':
-    args = DebugConfig()
+    args = Config()
     main(args)
