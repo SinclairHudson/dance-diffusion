@@ -20,6 +20,7 @@ import torchaudio
 import wandb
 
 from dataset.dataset import SampleDataset
+from beat_entropy import beat_entropy
 
 from audio_diffusion.models import DiffusionAttnUnet1D
 from audio_diffusion.utils import ema_update
@@ -43,7 +44,7 @@ def alpha_sigma_to_t(alpha, sigma):
     return torch.atan2(sigma, alpha) / math.pi * 2
 
 @torch.no_grad()
-def sample(model, x, steps:int, eta):
+def sample(model, x, steps: int, eta):
     """Draws samples from a model given starting noise."""
     print(20 * "-" + "creating a sample" + 20 * "-")
     ts = x.new_ones([x.shape[0]])
@@ -100,9 +101,10 @@ class DiffusionUncond(pl.LightningModule):
             'L1': F.l1_loss,
             'L2': F.mse_loss,
         }[global_args.loss_func]
+        self.lr = global_args.lr
 
     def configure_optimizers(self):
-        return optim.Adam([*self.diffusion.parameters()], lr=4e-5)
+        return optim.Adam([*self.diffusion.parameters()], lr=self.lr)
 
     def training_step(self, batch, batch_idx):
         reals = batch[0]
@@ -166,10 +168,14 @@ class DemoCallback(pl.Callback):
         noise = torch.randn([self.num_demos, 2, self.demo_samples]).to(module.device)
 
         try:
-            fakes, t = sample(module.diffusion_ema, noise, self.demo_steps, 0)
+            fakes_batch, t = sample(module.diffusion_ema, noise, self.demo_steps, 0)
 
             # Put the demos together
-            fakes = rearrange(fakes, 'b d n -> d (b n)')
+            fakes = rearrange(fakes_batch, 'b d n -> d (b n)')
+            fakes_batch = fakes_batch.clamp(-1, 1).cpu()
+
+            beat_entropies = [beat_entropy(fake_clip[0], self.sample_rate) for fake_clip in fakes_batch.numpy()]
+            avg_be = sum(beat_entropies)/len(beat_entropies)
 
             log_dict = {}
 
@@ -184,6 +190,7 @@ class DemoCallback(pl.Callback):
 
             log_dict[f'demo_melspec_left'] = wandb.Image(audio_spectrogram_image(fakes))
             log_dict[f'noise_schedule'] = wandb.Image(noise_schedule_plot(t))
+            log_dict[f'mean_beat_entropy'] = avg_be
 
             trainer.logger.experiment.log(log_dict, step=trainer.global_step)
         except Exception as e:
@@ -233,7 +240,7 @@ class Config():
     # NOTE: the type hints are required here to register these entries as fields (making them saveable to wandb)
     data: str="lofi"
     name: str=f"{data}-dd"
-    ckpt_path:str = "gwf-440k.ckpt"
+    ckpt_path:str = "lofi-453000.ckpt"
     training_dir:str = f"/media/sinclair/datasets/{data}/train_splits"
     output_dir:str = "/home/sinclair/Documents/dance-diffusion/outputs"
     save_path:str="/home/sinclair/Documents/dance-diffusion/outputs"
@@ -258,6 +265,7 @@ class Config():
     ema_decay: float = 0.995 # exponential moving average decay rate
     loss_func: str = "L2" # L1 or L2
     latent_dim: int = 0
+    lr: float = 4e-5
 
     # augmentation
     augmentation_max_pitch_shift: int = 2
@@ -268,8 +276,9 @@ class DebugConfig(Config):
     num_demos: int = 2
     demo_every: int = 50
     demo_steps: int = 20
+    cache_training_data:bool=False
 
 
 if __name__ == '__main__':
-    args = Config()
+    args = DebugConfig()
     main(args)
