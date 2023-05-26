@@ -213,7 +213,9 @@ def main(args):
     wandb_logger = pl.loggers.WandbLogger(project=args.name, log_model='all' if args.save_wandb=='all' else None)
 
     exc_callback = ExceptionCallback()
-    ckpt_callback = pl.callbacks.ModelCheckpoint(every_n_train_steps=args.checkpoint_every, save_top_k=-1, dirpath=save_path)
+    ckpt_callback = pl.callbacks.ModelCheckpoint(every_n_train_steps=args.checkpoint_every,
+                                                 # filename='{name}-{sample_rate:.2f}k-{length_in_sec:.1f}sec-{step}',
+                                                 save_top_k=-1, dirpath=save_path)
     demo_callback = DemoCallback(args)
 
     diffusion_model = DiffusionUncond(args)
@@ -248,14 +250,15 @@ class Config():
     # model parameters
     sample_rate:int = 44100//2 # rate (Hz) at which the audio is sampled at. 
     # NOTE: resampling is extremely slow (expensive). It's better to have the dataset at the sample rate you want
-    sample_size:int = 2 ** 16
+    # sample rate should not be changed if you're going from pretrained, since it affects the scale of features in the waveform
+    sample_size:int = 2 ** 17
     # length in seconds is sample_rate/sample_size
     length_in_sec: float = sample_size/sample_rate
     # training hyperparams
     random_crop:bool=True # crop audio at a random point
     checkpoint_every:int=3000 # steps
-    num_workers:int=4
-    batch_size: int = 4
+    num_workers:int=2
+    batch_size: int = 2
     accum_batches: int = 2
     seed: int = 1337
     num_gpus: int = 1
@@ -279,6 +282,8 @@ class DebugConfig(Config):
     num_demos: int = 2
     demo_every: int = 50
     demo_steps: int = 20
+    load_frac: float = 0.10  # load only a fraction of the dataset
+    # checkpoint_every:int=10 # steps
 
 
 if __name__ == '__main__':
