@@ -1,0 +1,3 @@
+[submodule "repaint"]
+	path = repaint
+	url = git@github.com:SinclairHudson/RePaint.git
