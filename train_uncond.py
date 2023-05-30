@@ -241,7 +241,7 @@ def main(args):
 @dataclass
 class Config():
     # NOTE: the type hints are required here to register these entries as fields (making them saveable to wandb)
-    data: str="lofi"
+    data: str="rainforest"
     name: str=f"{data}-dd"
     ckpt_path:str = "outputs/lofi-22kHz-459000.ckpt"
     training_dir:str = f"/media/sinclair/datasets/{data}-22k/train_splits"
@@ -268,7 +268,7 @@ class Config():
     num_demos: int = 4 # number of samples outputted upon a demo
     demo_every: int = 1000 # steps
     demo_steps: int = 300 # number of denoising steps to run
-    ema_decay: float = 0.995 # exponential moving average decay rate
+    ema_decay: float = 0.9 # exponential moving average decay rate
     loss_func: str = "L2" # L1 or L2
     latent_dim: int = 0
     lr: float = 4e-5
