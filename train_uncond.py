@@ -44,7 +44,7 @@ def alpha_sigma_to_t(alpha, sigma):
     return torch.atan2(sigma, alpha) / math.pi * 2
 
 @torch.no_grad()
-def sample(model, x, steps: int, eta):
+def sample(model, x, steps: int, eta:float=0.0):
     """Draws samples from a model given starting noise."""
     print(20 * "-" + "creating a sample" + 20 * "-")
     ts = x.new_ones([x.shape[0]])
@@ -168,7 +168,7 @@ class DemoCallback(pl.Callback):
         noise = torch.randn([self.num_demos, 2, self.demo_samples]).to(module.device)
 
         try:
-            fakes_batch, t = sample(module.diffusion_ema, noise, self.demo_steps, 0)
+            fakes_batch, t = sample(module.diffusion_ema, noise, self.demo_steps)
 
             # Put the demos together
             fakes = rearrange(fakes_batch, 'b d n -> d (b n)')
@@ -244,7 +244,7 @@ class Config():
     data: str="rainforest"
     name: str=f"{data}-dd"
     ckpt_path:str = "gwf-440k.ckpt"
-    training_dir:str = f"/media/sinclair/datasets/{data}-22k/train_splits"
+    training_dir:str = f"/media/sinclair/datasets/{data}-22k-70bpm/train_splits"
     output_dir:str = "/home/sinclair/Documents/dance-diffusion/outputs"
     save_path:str="/home/sinclair/Documents/dance-diffusion/outputs"
     # model parameters
